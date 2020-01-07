@@ -24,12 +24,12 @@ catch
 }
 Write-Host "Opting out users from MyAnalytics, please wait..." -ForegroundColor Yellow
 $users = Get-Mailbox -ResultSize Unlimited -RecipientTypeDetails UserMailbox | select UserPrincipalName,DisplayName
-$switch = "opt-out" #Change to Opt-In if you wish to enable MyAnalytics or Opt-Out to disable it
-try{
-foreach ($user in $users) {Set-UserAnalyticsConfig -Identity $user.UserPrincipalName -PrivacyMode $switch -ErrorAction silentlycontinue }
+$switch = "opt-in" #Change to Opt-In if you wish to enable MyAnalytics or Opt-Out to disable it
 foreach ($user in $users) {
-Write-Host $user.DisplayName, "|" $user.userprincipalname -ForegroundColor DarkCyan
-Get-UserAnalyticsConfig -Identity $user.UserPrincipalName -ErrorAction silentlycontinue | fl Privacy*
-}}catch{
-Write-Warning -Message "PROCESS - Error while opting out users from MyAnalytics"
-Write-Warning -Message $_}
+try{
+    Set-UserAnalyticsConfig -Identity $user.UserPrincipalName -PrivacyMode $switch -ErrorAction silentlycontinue
+    Write-Host $user.DisplayName, "|" $user.userprincipalname -ForegroundColor DarkCyan
+    Get-UserAnalyticsConfig -Identity $user.UserPrincipalName -ErrorAction silentlycontinue | fl Privacy*
+}catch{
+    Write-Warning -Message "PROCESS - Error while opting out users from MyAnalytics"
+    Write-Warning -Message $_}}
