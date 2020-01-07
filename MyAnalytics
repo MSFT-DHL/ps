@@ -22,9 +22,9 @@ catch
     Write-Warning -Message "PROCESS - Error while connecting to exchange online"
     Write-Warning -Message $_
 }
-Write-Host "Opting out users from MyAnalytics, please wait..." -ForegroundColor Yellow
+Write-Host "Opting in or out users from MyAnalytics, please wait..." -ForegroundColor Yellow
 $users = Get-Mailbox -ResultSize Unlimited -RecipientTypeDetails UserMailbox | select UserPrincipalName,DisplayName
-$switch = "opt-in" #Change to Opt-In if you wish to enable MyAnalytics or Opt-Out to disable it
+$switch = "opt-out" #Change to Opt-In if you wish to enable MyAnalytics or Opt-Out to disable it
 foreach ($user in $users) {
 try{
     Set-UserAnalyticsConfig -Identity $user.UserPrincipalName -PrivacyMode $switch -ErrorAction silentlycontinue
