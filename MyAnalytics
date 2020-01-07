@@ -1,5 +1,5 @@
 #Made by DHL
-#DISABLE MyAnalytics ON ALL USERS
+#DISABLE/ENABLE MyAnalytics ON ALL USERS
 param(
     [pscredential]$Credential = (Get-Credential)
 )
@@ -31,5 +31,5 @@ try{
     Write-Host $user.DisplayName, "|" $user.userprincipalname -ForegroundColor DarkCyan
     Get-UserAnalyticsConfig -Identity $user.UserPrincipalName -ErrorAction silentlycontinue | fl Privacy*
 }catch{
-    Write-Warning -Message "PROCESS - Error while opting out users from MyAnalytics"
+    Write-Warning -Message "PROCESS - Error while opting in or out users from MyAnalytics"
     Write-Warning -Message $_}}
