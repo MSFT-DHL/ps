@@ -1,0 +1,35 @@
+#Made by DHL
+#DISABLE MyAnalytics ON ALL USERS
+param(
+    [pscredential]$Credential = (Get-Credential)
+)
+try
+{
+    $paramNewPSSession = @{
+        ConfigurationName = 'Microsoft.Exchange'
+        ConnectionUri     = 'https://outlook.office365.com/powershell-liveid/'
+        Credential        = $Credential
+        Authentication    = 'Basic'
+        AllowRedirection  = $true
+        ErrorAction       = 'Stop'
+    }
+    $Session = New-PSSession @paramNewPSSession
+    Write-Verbose -Message "PROCESS - Connecting to Exchange Online"
+    $null = Import-PSSession $Session -DisableNameChecking
+}
+catch
+{
+    Write-Warning -Message "PROCESS - Error while connecting to exchange online"
+    Write-Warning -Message $_
+}
+Write-Host "Opting out users from MyAnalytics, please wait..." -ForegroundColor Yellow
+$users = Get-Mailbox -ResultSize Unlimited -RecipientTypeDetails UserMailbox | select UserPrincipalName,DisplayName
+$switch = "opt-out" #Change to Opt-In if you wish to enable MyAnalytics or Opt-Out to disable it
+try{
+foreach ($user in $users) {Set-UserAnalyticsConfig -Identity $user.UserPrincipalName -PrivacyMode $switch -ErrorAction silentlycontinue }
+foreach ($user in $users) {
+Write-Host $user.DisplayName, "|" $user.userprincipalname -ForegroundColor DarkCyan
+Get-UserAnalyticsConfig -Identity $user.UserPrincipalName -ErrorAction silentlycontinue | fl Privacy*
+}}catch{
+Write-Warning -Message "PROCESS - Error while opting out users from MyAnalytics"
+Write-Warning -Message $_}
