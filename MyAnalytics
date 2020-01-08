@@ -22,14 +22,52 @@ catch
     Write-Warning -Message "PROCESS - Error while connecting to exchange online"
     Write-Warning -Message $_
 }
-Write-Host "Opting in or out users from MyAnalytics, please wait..." -ForegroundColor Yellow
 $users = Get-Mailbox -ResultSize Unlimited -RecipientTypeDetails UserMailbox | select UserPrincipalName,DisplayName
-$switch = "opt-out" #Change to Opt-In if you wish to enable MyAnalytics or Opt-Out to disable it
-foreach ($user in $users) {
-try{
-    Set-UserAnalyticsConfig -Identity $user.UserPrincipalName -PrivacyMode $switch -ErrorAction silentlycontinue
-    Write-Host $user.DisplayName, "|" $user.userprincipalname -ForegroundColor DarkCyan
-    Get-UserAnalyticsConfig -Identity $user.UserPrincipalName -ErrorAction silentlycontinue | fl Privacy*
-}catch{
-    Write-Warning -Message "PROCESS - Error while opting in or out users from MyAnalytics"
-    Write-Warning -Message $_}}
+cls
+function Show-Menu
+{
+     param (
+           [string]$Title = 'MYANALYTICS SETTINGS'
+     )
+     cls
+     Write-Output "=============================================="
+     Write-Host "============ $Title ============" -foreground "yellow"
+     Write-Output "=============================================="
+     
+     Write-Host "Press '1' to enable MyAnalytics for all users"
+     Write-Host "Press '2' to disable MyAnalytics for all users"
+     Write-Host "Press 'Q' to quit."
+}
+do
+{
+     Show-Menu
+     $input = Read-Host "Please make a selection"
+     switch ($input)
+     {
+           '1' {
+               cls
+               foreach ($user in $users) {
+               try{
+                   Set-UserAnalyticsConfig -Identity $user.UserPrincipalName -PrivacyMode opt-in -ErrorAction silentlycontinue
+                   Write-Host $user.DisplayName, "|" $user.userprincipalname -ForegroundColor DarkCyan
+                   Get-UserAnalyticsConfig -Identity $user.UserPrincipalName -ErrorAction silentlycontinue | fl Privacy*
+               }catch{
+                   Write-Warning -Message "PROCESS - Error while opting in users from MyAnalytics"
+                   Write-Warning -Message $_}}
+           } '2' {
+               cls
+               foreach ($user in $users) {
+               try{
+                   Set-UserAnalyticsConfig -Identity $user.UserPrincipalName -PrivacyMode opt-out -ErrorAction silentlycontinue
+                   Write-Host $user.DisplayName, "|" $user.userprincipalname -ForegroundColor DarkCyan
+                   Get-UserAnalyticsConfig -Identity $user.UserPrincipalName -ErrorAction silentlycontinue | fl Privacy*
+               }catch{
+                   Write-Warning -Message "PROCESS - Error while opting out users from MyAnalytics"
+                   Write-Warning -Message $_}}
+           } 'q' {
+                return
+           }
+     }
+     pause
+}
+until ($input -eq 'q')
