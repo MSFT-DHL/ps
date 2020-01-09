@@ -1,0 +1,26 @@
+#Made by DHL
+#Export all Teams created date to CSV
+param(
+    [pscredential]$Credential = (Get-Credential)
+)
+try
+{
+    $paramNewPSSession = @{
+        ConfigurationName = 'Microsoft.Exchange'
+        ConnectionUri     = 'https://outlook.office365.com/powershell-liveid/'
+        Credential        = $Credential
+        Authentication    = 'Basic'
+        AllowRedirection  = $true
+        ErrorAction       = 'Stop'
+    }
+    $Session = New-PSSession @paramNewPSSession
+    Write-Verbose -Message "PROCESS - Connecting to Exchange Online"
+    $null = Import-PSSession $Session -DisableNameChecking
+}
+catch
+{
+    Write-Warning -Message "PROCESS - Error while connecting to exchange online"
+    Write-Warning -Message $_
+}
+$time = Get-Date -UFormat "%D %IH%M %p"
+Get-UnifiedGroup | where ResourceProvisioningOptions -eq Team | select displayn*,primarys*,ManagedBy,WhenCreated | Export-Csv -Path "C:\Created Teams $time.csv" -NoTypeInformation
