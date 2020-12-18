@@ -1,0 +1,146 @@
+<#---------------------------------------------------------------------------- 
+AVERTISSEMENT LÉGAL
+Ce script n'est pas pris en charge dans aucun programme ou service de support standard Microsoft. Ce script est fourni « TEL QUEL » sans garantie d'aucune sorte. Microsoft décline en outre toutes les garanties implicites, y compris, sans limitation, toute garantie implicite de qualité marchande ou d'adéquation à un usage particulier. L'ensemble des risques découlant de l'utilisation ou des performances de ce script est à vos risques. En aucun cas, Microsoft et l'auteur ne pourront être tenus responsables de quelque dommage que ce soit (y compris, sans limitation, les dommages pour perte de bénéfices commerciaux, interruption d'activité, perte d'informations commerciales, ou toute autre perte pécuniaire) résultant de l'utilisation ou de l'impossibilité d'utiliser ce script, même si Microsoft a été informé de la possibilité de tels dommages.
+
+Cette publication est fournie « TEL QUEL » sans aucune garantie. L'exécution de ce script est à vos risques.
+
+Auteur : Dany Harding Lamarche
+Courriel : hl.d@microsoft.com
+Profile : aka.ms/dany
+
+Version 1.0
+---------------------------------------------------------------------------- #>
+
+
+#INFORMATION DE BASE
+$SourceExpediteursDomaines = Read-Host "Entrez le nom de la politique ou se trouve vos expéditeurs et domaines autorisés / bloqués que vous désirez exporter. Ex: Politique Expéditeurs Source"
+$SourceIP = Read-Host "Entrez le nom de la politique ou se trouve vos adresses IP autorisées / bloqués que vous désirez exporter. Ex: Politique IP Source"
+$DestinationExpediteursDomaines = Read-Host "Entrez le nom de la politique ou les expéditeurs et domaines autorisés seront importés. Ex: Politique Expéditeurs Destination"
+$DestinationIP = Read-Host "Entrez le nom de la politique ou les adresses IP autorisés / bloqués seront importées. Ex: Politique IP Destination"
+$Path = Read-Host "Où aimeriez-vous exporter les fichiers CSV? Ex: C:\Users\NOM\Documents"
+
+function Show-Menu
+{
+     param (
+           [string]$Title = 'IMPORT / EXPORT ATP'
+     )
+     Write-Output "======================================================="
+     Write-Host "================= $Title =================" -foreground "yellow"
+     Write-Output "======================================================="
+     Write-Host "1: Appuyez sur '1' pour exporter les paramètres des politiques sources."
+     Write-Host "2: Appuyez sur '2' pour importer les paramètres des politiques exporté et/ou modifié manuellement."
+     Write-Host "3: Appuyez sur '3' pour afficher les paramètres des politiques sources."
+     Write-Host "4: Appuyez sur '4' pour afficher les paramètres importés dans les nouvelles politiques."
+     Write-Host "Q: Press 'Q' to quit."
+}
+do
+{
+     cls
+     Show-Menu
+     $input = Read-Host "Please make a selection"
+     switch ($input)
+     {
+           '1' {
+                cls
+                Write-Host "-----------------------" -ForegroundColor Yellow
+                Write-Host "Exportation en cours..." -ForegroundColor Green
+                Write-Host "-----------------------" -ForegroundColor Yellow
+                #EXPORT DES EXPÉDITEURS AUTORISÉS
+                $DataA = Get-HostedContentFilterPolicy $SourceExpediteursDomaines | select -ExpandProperty AllowedSenders | Select-Object @{Name=’AllowedSenders’;Expression={$_}}
+                $DataA | Export-Csv $Path\Expéditeurs-Autorisés.csv -NoTypeInformation
+                Write-Host "Vos expéditeurs autorisés ont été exportés!" -ForegroundColor Cyan
+
+                #EXPORT DES DOMAINES AUTORISÉS
+                $DataB = Get-HostedContentFilterPolicy $SourceExpediteursDomaines | select -ExpandProperty AllowedSenderDomains | Select-Object @{Name=’AllowedDomains’;Expression={$_}}
+                $DataB | Export-Csv $Path\Domaines-Autorisés.csv -NoTypeInformation
+                Write-Host "Vos domaines autorisés ont été exportés!" -ForegroundColor Cyan
+
+                #EXPORT DES EXPÉDITEURS BLOQUÉS
+                $DataC = Get-HostedContentFilterPolicy $SourceExpediteursDomaines | select -ExpandProperty BlockedSenders | Select-Object @{Name=’BlockedSenders’;Expression={$_}}
+                $DataC | Export-Csv $Path\Expéditeurs-Bloqués.csv -NoTypeInformation
+                Write-Host "Vos expéditeurs bloqués ont été exportés!" -ForegroundColor Cyan
+
+                #EXPORT DES DOMAINES BLOQUÉS
+                $DataD = Get-HostedContentFilterPolicy $SourceExpediteursDomaines | select -ExpandProperty BlockedSenderDomains | Select-Object @{Name=’BlockedDomains’;Expression={$_}}
+                $DataD | Export-Csv $Path\Domaines-Bloqués.csv -NoTypeInformation
+                Write-Host "Vos domaines bloqués ont été exportés!" -ForegroundColor Cyan
+                
+                #EXPORT DES IP AUTORISÉ
+                $DataE = Get-HostedConnectionFilterPolicy $SourceIP | select IpAllowList
+                $DataE.IPAllowList | Out-File $Path\IP-Autorisé.csv
+                Write-Host "Vos adresses IP autorisés ont été exportés!" -ForegroundColor Cyan
+
+                #EXPORT DES IP BLOQUÉ
+                $DataF = Get-HostedConnectionFilterPolicy $SourceIP | select IpBlockList
+                $DataF.IPBlockList | Out-File $Path\IP-Bloqué.csv
+                Write-Host "Vos adresses IP bloqués ont été exportés!" -ForegroundColor Cyan
+                Write-Host "---" -ForegroundColor Gray
+                Write-Host "Exportation complétée avec succès!" -ForegroundColor Green
+           } '2' {
+                cls
+                Write-Host "-----------------------" -ForegroundColor Yellow
+                Write-Host "Importation en cours..." -ForegroundColor Green
+                Write-Host "-----------------------" -ForegroundColor Yellow
+                #IMPORT DES EXPÉDITEURS AUTORISÉS
+                $ImportA = Import-Csv -Path $Path\Expéditeurs-Autorisés.csv
+                ForEach ($lineA in $ImportA) {try{Set-HostedContentFilterPolicy -ErrorAction Stop $SourceExpediteursDomaines -AllowedSenders @{Add=$lineA.AllowedSenders}}catch{Write-Warning -Message $_}}
+                Write-Host "Vos expéditeurs autorisés ont été importés!" -ForegroundColor Cyan
+
+                #IMPORT DES DOMAINES AUTORISÉS
+                $ImportB = Import-Csv -Path $Path\Domaines-Autorisés.csv
+                ForEach ($lineB in $ImportB) {try{Set-HostedContentFilterPolicy -ErrorAction Stop $SourceExpediteursDomaines -AllowedSenderDomains @{Add=$lineB.AllowedDomains}}catch{Write-Warning -Message $_}}
+                Write-Host "Vos domaines autorisés ont été importés!" -ForegroundColor Cyan
+
+                #IMPORT DES EXPÉDITEURS BLOQUÉS
+                $ImportC = Import-Csv -Path $Path\Expéditeurs-Bloqués.csv
+                ForEach ($lineC in $ImportC) {try{Set-HostedContentFilterPolicy -ErrorAction Stop $SourceExpediteursDomaines -BlockedSenders @{Add=$lineC.BlockedSenders}}catch{Write-Warning -Message $_}}
+                Write-Host "Vos expéditeurs bloqués ont été importés!" -ForegroundColor Cyan
+
+                #IMPORT DES DOMAINES BLOQUÉS
+                $ImportD = Import-Csv -Path $Path\Domaines-Bloqués.csv
+                ForEach ($lineD in $ImportD) {try{Set-HostedContentFilterPolicy -ErrorAction Stop $SourceExpediteursDomaines -BlockedSenderDomains @{Add=$lineD.BlockedDomains}}catch{Write-Warning -Message $_}}
+                Write-Host "Vos domaines bloqués ont été importés!" -ForegroundColor Cyan
+
+                #IMPORT DES IP AUTORISÉ
+                $ImportE = $DataE.IPAllowList 
+                ForEach ($safeIP in $ImportE){try{Set-HostedConnectionFilterPolicy $DestinationIP -IPAllowList @{Add="$safeIP"}}catch{Write-Warning -Message $_}}
+                Write-Host "Vos adresses IP autorisés ont été importés!" -ForegroundColor Cyan
+
+                #IMPORT DES IP BLOQUÉ
+                $ImportF = $DataF.IPBlockList
+                ForEach ($blockedIP in $ImportF){try{Set-HostedConnectionFilterPolicy $DestinationIP -IPBlockList @{Add="$blockedIP"}}catch{Write-Warning -Message $_}}
+                Write-Host "Vos adresses IP bloqués ont été importés!" -ForegroundColor Cyan
+                Write-Host "---" -ForegroundColor Gray
+                Write-Host "Importation complétée avec succès!" -ForegroundColor Green
+           } '3' {
+                cls
+                Get-HostedContentFilterPolicy $SourceExpediteursDomaines | ft AllowedSenders,AllowedSenderDomains,BlockedSenders,BlockedSenderDomains -Wrap
+                Get-HostedConnectionFilterPolicy $SourceIP | ft IPAllowList,IPBlockList -Wrap
+                
+           } '4' {
+                cls
+                Get-HostedContentFilterPolicy $DestinationExpediteursDomaines | ft AllowedSenders,AllowedSenderDomains,BlockedSenders,BlockedSenderDomains -Wrap
+                Get-HostedConnectionFilterPolicy $DestinationIP | ft IPAllowList,IPBlockList -Wrap
+                
+           } 'q' {
+                return
+           }
+     }
+     pause
+}
+until ($input -eq 'q')
+
+
+<#ADD FAKE DATA
+Set-HostedContentFilterPolicy Default -AllowedSenders user1@allowed.com,user2@allowed.com,user3@allowed.com -AllowedSenderDomains allowed1.com,allowed2.com,allowed3.com -BlockedSenders user1@blocked.com,user2@blocked.com,user3@blocked.com -BlockedSenderDomains blocked1.com,blocked2.com,blocked3.com
+Set-HostedConnectionFilterPolicy Default -IPAllowList @{Add="192.168.1.1","192.168.1.2","192.168.1.3"} -IPBlockList @{Add="192.168.2.1","192.168.2.2","192.168.2.3"}
+Get-HostedContentFilterPolicy default | ft AllowedSenders,AllowedSenderDomains,BlockedSenders,BlockedSenderDomains -Wrap
+Get-HostedConnectionFilterPolicy default | ft IPAllowList,IPBlockList -Wrap
+#>
+
+<#RESET
+Set-HostedContentFilterPolicy Default -AllowedSenders $null -AllowedSenderDomains $null -BlockedSenders $null -BlockedSenderDomains $null
+Set-HostedConnectionFilterPolicy Default -IPAllowList $null -IPBlockList $null
+Get-HostedContentFilterPolicy default | ft AllowedSenders,AllowedSenderDomains,BlockedSenders,BlockedSenderDomains
+Get-HostedConnectionFilterPolicy default | ft IPAllowList,IPBlockList
+#>
