@@ -1,0 +1,63 @@
+#SCRIPT DE CRÉATION DE GROUPES DYNAMIQUE DE MASS
+#V1.0.0
+#DANY HARDING LAMARCHE - AKA.MS/DANY
+#HL.D@microsoft.com
+
+#Connect-AzureAD
+function Show-Menu
+{
+     param (
+           [string]$Title = 'CRÉATION DE GROUPES DYNAMIQUE'
+     )
+     cls
+     Write-Output "==========================================="
+     Write-Host "====== $Title ======" -foreground "yellow"
+     Write-Output "==========================================="
+     
+     Write-Host "1: Appuyer sur '1' pour créer plusieurs groupes de sécurité dynamiques."
+     Write-Host "2: Appuyer sur '2' pour créer plusieurs groupes O365 dynamique."
+     Write-Host "Q: Appuyer sur 'Q' pour quitter."
+}
+do
+{
+     Show-Menu
+     $input = Read-Host "Choisissez une des options suivantes"
+     switch ($input)
+     {
+           '1' {      
+              cls
+              try{
+              Write-Output "======================================================"
+              Write-host "========== CRÉATIONS DE GROUPES DE SÉCURITÉ ==========" -foreground "yellow"
+              Write-Output "======================================================"
+              $sourceSD=read-host "Veuillez saisir l'emplacement de votre fichier. Ex : C:\Desktop\sécurité-dynamiques.csv"
+              Import-Csv $sourceSD | foreach {New-AzureADMSGroup -DisplayName $_.DisplayName -Description $_.Descriptions -MailEnabled $false -SecurityEnabled $true -MailNickname $_.Alias -GroupTypes "DynamicMembership" -MembershipRule $_.Rules -MembershipRuleProcessingState "Paused"} -ErrorAction Stop
+              Write-Output "======================================================"
+              Write-host "== VOS GROUPES SONT DÉSORMAIS ACCESSIBLE EN-LIGNE ! ==" -foreground "green"
+              Write-Output "======================================================"
+              }catch{
+              Write-Warning -Message "ERREUR - Une erreur s'est produite lors de la création d'un groupe dynamique."
+              Write-Warning -Message $_}
+
+           }  '2' {      
+              cls
+              try{
+              Write-Output "======================================================="
+              Write-host "========= CRÉATIONS DE GROUPES O365 DYNAMIQUE =========" -foreground "yellow"
+              Write-Output "======================================================="
+              $sourceGD=read-host "Veuillez saisir l'emplacement de votre fichier. Ex : C:\Desktop\o365-dynamiques.csv"
+              Import-Csv $sourceGD | foreach {New-AzureADMSGroup -DisplayName $_.DisplayName -Description $_.Descriptions -MailEnabled $false -SecurityEnabled $true -MailNickname $_.Alias -GroupTypes "DynamicMembership","Unified" -MembershipRule $_.Rules -MembershipRuleProcessingState "Paused"} -ErrorAction Stop
+              Write-Output "======================================================"
+              Write-host "== VOS GROUPES SONT DÉSORMAIS ACCESSIBLE EN-LIGNE ! ==" -foreground "green"
+              Write-Output "======================================================"
+              }catch{
+              Write-Warning -Message "ERREUR - Une erreur s'est produite lors de la création d'un groupe dynamique."
+              Write-Warning -Message $_}
+
+           }  'q' {
+                return
+           }
+     }
+     pause
+}
+until ($input -eq 'q')
