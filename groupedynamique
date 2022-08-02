@@ -3,7 +3,7 @@
 #DANY HARDING LAMARCHE - AKA.MS/DANY
 #HL.D@microsoft.com
 
-#Connect-AzureAD
+Connect-AzureAD
 function Show-Menu
 {
      param (
