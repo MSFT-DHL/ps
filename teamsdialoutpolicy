@@ -1,0 +1,80 @@
+#SCRIPT FOR TEAMS DIAL OUT POLICY
+#V1.0.0
+#DANY HARDING LAMARCHE - AKA.MS/DANY
+#HL.D@microsoft.com
+
+#Connect-MicrosoftTeams
+function Show-Menu
+{
+     param (
+           [string]$Title = 'DIAL OUT POLICY MANAGEMENT'
+     )
+     cls
+     Write-Host "============================================" -ForegroundColor green
+     Write-Host "======== $Title ========" -foreground green
+     Write-Host "============================================" -ForegroundColor green
+     
+     Write-Host "1: Press '1' to see your current organization policy configuration."
+     Write-Host "2: Press '2' to see all your users dial out policy."
+     Write-Host "3: Press '3' to edit the global policy so that dial out is permitted for domestic and international numbers."
+     Write-Host "4: Press '4' to assign the global policy to all users."
+     Write-Host "5: Press '5' to assign the global policy to a specific user."
+     Write-Host "E: Press 'E' to exit."
+}
+do
+{
+     Show-Menu
+     $input = Read-Host "Choose one of the following options"
+     switch ($input)
+     {
+           '1' {#Get Dial Out Policy (tenant wide)
+              cls
+              Write-Host "==========================================" -ForegroundColor Yellow
+              Write-Host "BELOW IS YOUR CURRENT GLOBAL CONFIGURATION" -ForegroundColor Cyan
+              Write-Host "==========================================" -ForegroundColor Yellow
+              Get-CSOnlineDialOutPolicy -Identity Global | ft I*,A*
+              Write-Host ""
+
+           }  '2' {#Get Dial Out Policy (per user for all users)
+              cls
+              Write-Host "=============================================================" -ForegroundColor Yellow
+              Write-Host "LISTING ALL USERS DIAL OUT POLICY, THIS MAY TAKE SOME TIME..." -ForegroundColor Yellow
+              Write-Host "=============================================================" -ForegroundColor Yellow
+              Get-CsOnlineUser | where {$_.InterpretedUserType -cne "PureOnlineTeamsOnlyUserWithNoService"} | ft display*,userp*,OnlineD*
+              
+
+           }  '3' {#Assign Dial Out Policy tenant wide
+              cls
+              Write-Host "=======================================================================================================================" -ForegroundColor Yellow
+              Write-Host "CONFIGURING THE TENANT WIDE POLICY TO ALLOW OUTBOUND SERVICE CALL THROUGH MEETINGS FOR INTERNATIONAL AND DOMESTIC CALLS" -ForegroundColor Yellow
+              Write-Host "=======================================================================================================================" -ForegroundColor Yellow
+              Grant-CsDialoutPolicy -Global -PolicyName "DialoutCPCandPSTNInternational"
+              Get-CSOnlineDialOutPolicy -Identity Global | ft I*,A*
+              Write-Host "The tenant outbound policy has been configured!" -ForegroundColor Green;write-host " "
+
+           }  '4' {#Assign Dial Out Policy per user to all users
+              cls
+              Write-Host "==================================================================================" -ForegroundColor Yellow
+              Write-Host "ASSIGNING THE GLOBAL POLICY TO ALL USERS, PLEASE WAIT AS THIS MAY TAKE A MOMENT..." -ForegroundColor Yellow
+              Write-Host "==================================================================================" -ForegroundColor Yellow
+              $allusers = Get-CsOnlineUser | where {$_.InterpretedUserType -cne "PureOnlineTeamsOnlyUserWithNoService"}
+              $allusers | Grant-CsDialoutPolicy -PolicyName "Global"
+              Get-CsOnlineUser | where {$_.InterpretedUserType -cne "PureOnlineTeamsOnlyUserWithNoService"} | ft display*,userp*,OnlineD*
+              Write-Host "All users have been assigned the global policy!" -ForegroundColor Green;write-host " "
+
+           }  '5' {#Assign Dial Out Policy per user to 1 user
+              cls
+              Write-Host "===============================================================================================" -ForegroundColor Yellow
+              Write-host "PLEASE ENTER THE USER'S UPN FOR WHICH YOU WANT TO ASSIGN THE GLOBAL POLICY. EX: NAME@DOMAIN.COM" -ForegroundColor Yellow -NoNewline; $User=Read-Host " "
+              Write-Host "===============================================================================================" -ForegroundColor Yellow
+              Grant-CsDialoutPolicy -Identity $user -PolicyName Global
+              Get-CsOnlineUser -Identity $User | ft display*,userp*,OnlineD*
+              Write-Host "The global policy has been assigned to $User!" -ForegroundColor Green;write-host " "
+
+           }  'E' {
+                return
+           }
+     }
+     pause
+}
+until ($input -eq 'q')
