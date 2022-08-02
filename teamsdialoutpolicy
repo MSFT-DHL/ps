@@ -3,7 +3,7 @@
 #DANY HARDING LAMARCHE - AKA.MS/DANY
 #HL.D@microsoft.com
 
-#Connect-MicrosoftTeams
+Connect-MicrosoftTeams
 function Show-Menu
 {
      param (
