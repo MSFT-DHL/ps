@@ -1,0 +1,22 @@
+<#---------------------------------------------------------------------------- 
+AVERTISSEMENT LÉGAL
+Ce script n'est pas pris en charge dans aucun programme ou service de support standard Microsoft. Ce script est fourni « TEL QUEL » sans garantie d'aucune sorte. Microsoft décline en outre toutes les garanties implicites, y compris, sans limitation, toute garantie implicite de qualité marchande ou d'adéquation à un usage particulier. L'ensemble des risques découlant de l'utilisation ou des performances de ce script est à vos risques. En aucun cas, Microsoft et l'auteur ne pourront être tenus responsables de quelque dommage que ce soit (y compris, sans limitation, les dommages pour perte de bénéfices commerciaux, interruption d'activité, perte d'informations commerciales, ou toute autre perte pécuniaire) résultant de l'utilisation ou de l'impossibilité d'utiliser ce script, même si Microsoft a été informé de la possibilité de tels dommages.
+
+Cette publication est fournie « TEL QUEL » sans aucune garantie. L'exécution de ce script est à vos risques.
+
+Auteur : Dany Harding Lamarche
+Courriel : hl.d@microsoft.com
+Profile : aka.ms/dany
+
+Version 1.0
+---------------------------------------------------------------------------- #>
+#Grant PexipServiceProviderEnabled policy to all Teams enabled users
+Connect-MsolService
+Connect-MicrosoftTeams
+$upn = Get-MsolUser -All | Where-Object {$_.UserPrincipalName -match "sysinc.ca" -or $_.UserPrincipalName -match "onmicrosoft.com" -and $_.Licenses.ServiceStatus.ServicePlan.ServiceName -match "TEAMS"}
+$upn |ForEach-Object {
+write-host $_.UserPrincipalName -ForegroundColor "yellow"
+Grant-CsTeamsVideoInteropServicePolicy -PolicyName PexipServiceProviderEnabled -Identity $_.UserPrincipalName
+Start-Sleep -Seconds 2
+Get-CsUserPolicyAssignment -Identity $_.UserPrincipalName | ft p*
+}
