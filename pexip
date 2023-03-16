@@ -10,10 +10,13 @@ Profile : aka.ms/dany
 
 Version 1.0
 ---------------------------------------------------------------------------- #>
-#Grant PexipServiceProviderEnabled policy to all Teams enabled users
+##Grant PexipServiceProviderEnabled policy to all Teams enabled users
+#Connexion aux modules MSOL et Teams
 Connect-MsolService
 Connect-MicrosoftTeams
-$upn = Get-MsolUser -All | Where-Object {$_.UserPrincipalName -match "sysinc.ca" -or $_.UserPrincipalName -match "onmicrosoft.com" -and $_.Licenses.ServiceStatus.ServicePlan.ServiceName -match "TEAMS"}
+#Variables
+$upn = Get-MsolUser -All | Where-Object {$_.UserPrincipalName -match "DOMAINE1" -or $_.UserPrincipalName -match "DOMAINE2" -or $_.UserPrincipalName -match "DOMAINE3" -and $_.Licenses.ServiceStatus.ServicePlan.ServiceName -match "TEAMS"}
+#Boucle
 $upn |ForEach-Object {
 write-host $_.UserPrincipalName -ForegroundColor "yellow"
 Grant-CsTeamsVideoInteropServicePolicy -PolicyName PexipServiceProviderEnabled -Identity $_.UserPrincipalName
