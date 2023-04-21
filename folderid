@@ -1,0 +1,28 @@
+#Connect to Exchange Online
+Connect-ExchangeOnline
+
+#Variables
+cls
+$UserUPN = read-host "Enter the user's UPN in which you want to see the folder ID. Ex: name@domain.com"
+
+#Script to pull proper encoded folder id
+$folderQueries = @()
+   $folderStatistics = Get-MailboxFolderStatistics $UserUPN
+   foreach ($folderStatistic in $folderStatistics)
+   {
+       $folderId = $folderStatistic.FolderId;
+       $folderPath = $folderStatistic.FolderPath;
+       $encoding= [System.Text.Encoding]::GetEncoding("us-ascii")
+       $nibbler= $encoding.GetBytes("0123456789ABCDEF");
+       $folderIdBytes = [Convert]::FromBase64String($folderId);
+       $indexIdBytes = New-Object byte[] 48;
+       $indexIdIdx=0;
+       $folderIdBytes | select -skip 23 -First 24 | %{$indexIdBytes[$indexIdIdx++]=$nibbler[$_ -shr 4];$indexIdBytes[$indexIdIdx++]=$nibbler[$_ -band 0xF]}
+       $folderQuery = "folderid:$($encoding.GetString($indexIdBytes))";
+       $folderStat = New-Object PSObject
+       Add-Member -InputObject $folderStat -MemberType NoteProperty -Name FolderPath -Value $folderPath
+       Add-Member -InputObject $folderStat -MemberType NoteProperty -Name FolderQuery -Value $folderQuery
+       $folderQueries += $folderStat
+   }
+   Write-Host "-----Exchange Folders-----" -ForegroundColor "Yellow"
+   $folderQueries |ft
