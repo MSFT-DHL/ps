@@ -31,3 +31,4 @@ $folderQueries = @()
 #Deleted Items = 1st level folder
 #Deletions = 2nd level folder
 #Recoverable Items = Purge and Discovery Hold
+#Query by date and folderid: (DeletedDate>=MM/DD/YYYY AND DeletedDate<=MM/DD/YYYY) AND (folderid:YourFolderID)
