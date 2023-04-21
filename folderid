@@ -26,3 +26,8 @@ $folderQueries = @()
    }
    Write-Host "-----Exchange Folders-----" -ForegroundColor "Yellow"
    $folderQueries |ft
+
+##For your information##
+#Deleted Items = 1st level folder
+#Deletions = 2nd level folder
+#Recoverable Items = Purge and Discovery Hold
