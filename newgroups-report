@@ -1,0 +1,63 @@
+<#---------------------------------------------------------------------------- 
+Legal Warning
+This script is not supported in any standard Microsoft support program or service. This script is provided "AS IS" without warranty of any kind. Microsoft also disclaims all implied warranties, including, without limitation, any implied warranties of merchantability or fitness for a particular purpose. All risks arising from the use or performance of this script are at your own risk. In no event shall Microsoft or the author be liable for any damages whatsoever (including, without limitation, damages for loss of business profits, business interruption, loss of business information, or any other pecuniary loss) arising out of the use or inability to use this script, even if Microsoft has been advised of the possibility of such damages.
+
+This publication is provided "AS IS" without any warranty. The execution of this script is at your own risk.
+
+Author: Dany Harding Lamarche
+Email: hl.d@microsoft.com
+Profile: aka.ms/dany
+
+Version 1.0
+---------------------------------------------------------------------------- #>
+cls
+# Connect to Office 365 using Exchange Online PowerShell module
+Import-Module ExchangeOnlineManagement
+Connect-ExchangeOnline
+
+# Values
+Write-Host "Enter the smtp server that will be use to relay the report." -ForegroundColor "Yellow"
+$smtpServer = read-host "Example: smtp.office365.com"
+Write-Host "Enter the port number for this server." -ForegroundColor "Yellow"
+$smtpPort = read-host "Example: 587"
+Write-Host "Enter the email address of the sender (shared mailbox not allowed)." -ForegroundColor "Yellow"
+$from = read-host "Example: sender@domain.com"
+Write-Host "Enter the email address of the recipient." -ForegroundColor "Yellow"
+$to = read-host "Example: recipient@domain.com"
+
+# Connect to Office 365 SMTP server using TLS
+$smtp = New-Object System.Net.Mail.SmtpClient($smtpServer, $smtpPort)
+$smtp.EnableSsl = $true
+
+# Authenticate with SecureString
+$Username = $from
+Write-Host "Enter the sender's password for TLS authentication purposes." -ForegroundColor "Yellow"
+$Psw = read-host "Example: password"
+$Password = $Psw | ConvertTo-SecureString -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential($username, $password)
+
+# Set the credentials on the SmtpClient object
+$smtp.Credentials = $credential
+
+# Get the list of groups created within the last 30 days
+$groups = Get-UnifiedGroup -ResultSize Unlimited | Where-Object {$_.WhenCreated -ge (Get-Date).AddDays(-30)} | Select-Object WhenCreated,DisplayName,Language,AccessType,ManagedBy
+
+# Check if the folder exists, create it if it does not
+$folderPath = Split-Path $csvPath
+if(!(Test-Path $folderPath)){
+    New-Item -ItemType Directory -Force -Path $folderPath
+}
+
+# Export the groups list to a CSV file
+$csvPath = "C:\temp\NewOffice365Groups.csv"
+$groups | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
+
+# Build the email message
+Write-Host "Enter your desired email subject." -ForegroundColor "Yellow"
+$subject = "New Office 365 groups created within the last 30 days"
+$emailBody = "Please find below the list of new Office 365 groups created within the last 30 days."
+$emailMessage = New-Object System.Net.Mail.MailMessage($from, $to, $subject, $emailBody)
+$emailMessage.Attachments.Add($csvPath)
+
+# Send the email
+$smtp.Send($emailMessage)
