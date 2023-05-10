@@ -8,12 +8,50 @@ Author: Dany Harding Lamarche
 Email: hl.d@microsoft.com
 Profile: aka.ms/dany
 
-Version 1.0
+Version 2.0
 ---------------------------------------------------------------------------- #>
 cls
-# Connect to Office 365 using Exchange Online PowerShell module
-Import-Module ExchangeOnlineManagement
+# Connect to Exchange Online
 Connect-ExchangeOnline
+
+# Connect to Azure AD
+Connect-AzureAD
+
+# Get the current date and time to add to the CSV file name
+$date = Get-Date -Format "yyyy-MM-dd-HH-mm"
+
+# Get the list of groups created within the last 30 days
+$groups = Get-UnifiedGroup -ResultSize Unlimited | Where-Object {$_.WhenCreated -ge (Get-Date).AddDays(-30)} | Select-Object WhenCreated,DisplayName,Language,AccessType,ManagedBy
+
+# Initialize an empty array to store the results
+$results = @()
+
+# Loop through each group and retrieve the managedBy user UPN
+foreach ($group in $groups) {
+    $owners = $group.ManagedBy | ForEach-Object { Get-AzureADUser -SearchString $_ | where {$_.UserType -eq 'Member'}} | Select-Object Display*,UserP*
+
+    # Create a new custom object with the group name and managedBy user UPN
+    $result = [PSCustomObject] @{
+        "Group Name" = $group.DisplayName
+        Owners = ($owners | Select-Object -ExpandProperty DisplayName) -join '; '
+        UPN = ($owners | Select-Object -ExpandProperty UserPrincipalName) -join '; '
+        Language = $group.Language.Name
+        "Access Type" = $group.AccessType
+    }
+
+    # Add the result to the array
+    $results += $result
+}
+
+# Check if the folder exists, create it if it does not
+$csvPath = "C:\temp\O365Groups_$date.csv"
+$folderPath = Split-Path $csvPath
+if(!(Test-Path $folderPath)){
+    New-Item -ItemType Directory -Force -Path $folderPath
+}
+
+# Export the results to a CSV file
+$results | Export-Csv -Path "$csvPath" -Encoding UTF8 -NoTypeInformation
 
 # Values
 Write-Host "Enter the smtp server that will be use to relay the report." -ForegroundColor "Yellow"
@@ -25,39 +63,19 @@ $from = read-host "Example: sender@domain.com"
 Write-Host "Enter the email address of the recipient." -ForegroundColor "Yellow"
 $to = read-host "Example: recipient@domain.com"
 
-# Connect to Office 365 SMTP server using TLS
-$smtp = New-Object System.Net.Mail.SmtpClient($smtpServer, $smtpPort)
-$smtp.EnableSsl = $true
+# Defined email parameters
+$Subject = "Monthly report of new Office 365 Groups created within 30 days"
+$Body = "This email contains the monthly report of new Office 365 Groups created within the last 30 days. Please find the attached CSV file for more information."
 
-# Authenticate with SecureString
-$Username = $from
-Write-Host "Enter the sender's password for TLS authentication purposes." -ForegroundColor "Yellow"
-$Psw = read-host "Example: password"
-$Password = $Psw | ConvertTo-SecureString -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential($username, $password)
+# Create a new email message
+$emailMessage = New-Object System.Net.Mail.MailMessage($From, $To, $Subject, $Body)
 
-# Set the credentials on the SmtpClient object
-$smtp.Credentials = $credential
-
-# Get the list of groups created within the last 30 days
-$groups = Get-UnifiedGroup -ResultSize Unlimited | Where-Object {$_.WhenCreated -ge (Get-Date).AddDays(-30)} | Select-Object WhenCreated,DisplayName,Language,AccessType,ManagedBy
-
-# Check if the folder exists, create it if it does not
-$folderPath = Split-Path $csvPath
-if(!(Test-Path $folderPath)){
-    New-Item -ItemType Directory -Force -Path $folderPath
-}
-
-# Export the groups list to a CSV file
-$csvPath = "C:\temp\NewOffice365Groups.csv"
-$groups | Export-Csv -Path $csvPath -Encoding UTF8 -NoTypeInformation
-
-# Build the email message
-Write-Host "Enter your desired email subject." -ForegroundColor "Yellow"
-$subject = "New Office 365 groups created within the last 30 days"
-$emailBody = "Please find below the list of new Office 365 groups created within the last 30 days."
-$emailMessage = New-Object System.Net.Mail.MailMessage($from, $to, $subject, $emailBody)
-$emailMessage.Attachments.Add($csvPath)
+# Add the CSV file as an attachment
+$emailAttachment = New-Object System.Net.Mail.Attachment("$csvPath")
+$emailMessage.Attachments.Add($emailAttachment)
 
 # Send the email
-$smtp.Send($emailMessage)
+$smtpClient = New-Object System.Net.Mail.SmtpClient($smtpServer, $smtpPort)
+$smtpClient.EnableSsl = $true
+$smtpClient.Credentials = $smtpCredential
+$smtpClient.Send($emailMessage)
