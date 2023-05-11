@@ -8,7 +8,7 @@ Author: Dany Harding Lamarche
 Email: hl.d@microsoft.com
 Profile: aka.ms/dany
 
-Version 2.0
+Version 2.1
 ---------------------------------------------------------------------------- #>
 cls
 # Connect to Exchange Online
@@ -30,11 +30,15 @@ $results = @()
 foreach ($group in $groups) {
     $owners = $group.ManagedBy | ForEach-Object { Get-AzureADUser -SearchString $_ | where {$_.UserType -eq 'Member'}} | Select-Object Display*,UserP*
 
-    # Create a new custom object with the group name and managedBy user UPN
+    # Retrieve the primary SMTP address for the group
+    $primarySMTP = Get-UnifiedGroup $group.DisplayName | Select-Object PrimarySmtpAddress
+
+    # Create a new custom object with the group name, managedBy user UPN, and primary SMTP address
     $result = [PSCustomObject] @{
         "Group Name" = $group.DisplayName
-        Owners = ($owners | Select-Object -ExpandProperty DisplayName) -join '; '
-        UPN = ($owners | Select-Object -ExpandProperty UserPrincipalName) -join '; '
+        "Group Primary SMTP" = $primarySMTP.PrimarySmtpAddress
+        "Owners Name" = ($owners | Select-Object -ExpandProperty DisplayName) -join '; '
+        "Owners UPN" = ($owners | Select-Object -ExpandProperty UserPrincipalName) -join '; '
         Language = $group.Language.Name
         "Access Type" = $group.AccessType
     }
@@ -63,6 +67,20 @@ $from = read-host "Example: sender@domain.com"
 Write-Host "Enter the email address of the recipient." -ForegroundColor "Yellow"
 $to = read-host "Example: recipient@domain.com"
 
+# Connect to Office 365 SMTP server using TLS
+$smtp = New-Object System.Net.Mail.SmtpClient($smtpServer, $smtpPort)
+$smtp.EnableSsl = $true
+
+# Authenticate with SecureString
+$Username = $from
+Write-Host "Enter the sender's password for TLS authentication purposes." -ForegroundColor "Yellow"
+$Psw = read-host "Example: password"
+$Password = $Psw | ConvertTo-SecureString -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential($username, $password)
+
+# Set the credentials on the SmtpClient object
+$smtp.Credentials = $credential
+
 # Defined email parameters
 $Subject = "Monthly report of new Office 365 Groups created within 30 days"
 $Body = "This email contains the monthly report of new Office 365 Groups created within the last 30 days. Please find the attached CSV file for more information."
@@ -75,7 +93,4 @@ $emailAttachment = New-Object System.Net.Mail.Attachment("$csvPath")
 $emailMessage.Attachments.Add($emailAttachment)
 
 # Send the email
-$smtpClient = New-Object System.Net.Mail.SmtpClient($smtpServer, $smtpPort)
-$smtpClient.EnableSsl = $true
-$smtpClient.Credentials = $smtpCredential
-$smtpClient.Send($emailMessage)
+$smtp.Send($emailMessage)
