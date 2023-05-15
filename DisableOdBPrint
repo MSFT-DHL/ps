@@ -1,0 +1,40 @@
+<#---------------------------------------------------------------------------- 
+Legal Warning
+This script is not supported in any standard Microsoft support program or service. This script is provided "AS IS" without warranty of any kind. Microsoft also disclaims all implied warranties, including, without limitation, any implied warranties of merchantability or fitness for a particular purpose. All risks arising from the use or performance of this script are at your own risk. In no event shall Microsoft or the author be liable for any damages whatsoever (including, without limitation, damages for loss of business profits, business interruption, loss of business information, or any other pecuniary loss) arising out of the use or inability to use this script, even if Microsoft has been advised of the possibility of such damages.
+
+This publication is provided "AS IS" without any warranty. The execution of this script is at your own risk.
+
+Author: Dany Harding Lamarche
+Email: hl.d@microsoft.com
+Profile: aka.ms/dany
+
+Version 1.0
+---------------------------------------------------------------------------- #>
+cls
+# Get the tenant name using the MSOnline module
+$tenantdomain = (Get-MsolDomain | Where-Object { $_.Name -match "onmicrosoft.com" }).Name
+$tenantname = $tenantdomain.Split(".")[0]
+
+# Construct the SharePoint Online site URL using the tenant name
+$siteUrl = "https://$tenantName-admin.sharepoint.com/"
+
+#Connection to MSOL and SharePoint
+Connect-MsolService
+Connect-SPOService -Url $siteUrl
+
+# Get all OneDrive users
+$accounts = Get-MsolUser -All | Where-Object { $_.IsLicensed -eq $true } | select userp*
+
+# Loop through each user and disable the print button
+foreach ($account in $accounts) {
+    #Getting site url per user
+    $email = $account.UserPrincipalName
+    $username = $email.Split("@")[0]
+    Write-Host "Username: $username"
+
+    # Disable the print button for the OneDrive site
+    $odbUrl = Get-SPOSite -IncludePersonalSite $true | where {$_.Owner -eq "$email"}
+    $odbUrl | Set-SPOSite -DisableFlows Disabled
+}
+
+#THIS SCRIPT IS UNDER CONSTRUCTION. IT IS NOT WORKING YET. THANK YOU.
