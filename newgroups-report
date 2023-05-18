@@ -8,7 +8,7 @@ Author: Dany Harding Lamarche
 Email: hl.d@microsoft.com
 Profile: aka.ms/dany
 
-Version 2.1
+Version 2.2
 ---------------------------------------------------------------------------- #>
 cls
 # Connect to Exchange Online
@@ -28,17 +28,18 @@ $results = @()
 
 # Loop through each group and retrieve the managedBy user UPN
 foreach ($group in $groups) {
-    $owners = $group.ManagedBy | ForEach-Object { Get-AzureADUser -SearchString $_ | where {$_.UserType -eq 'Member'}} | Select-Object Display*,UserP*
+    $owners = $group.ManagedBy | ForEach-Object { Get-AzureADUser -SearchString $_ | where {$_.UserType -eq 'Member'}} | Select-Object Display*
+    $ownersSMTP = $group.ManagedBy | ForEach-Object { Get-Mailbox -Identity $_ } | Select-Object PrimarySmtpAddress
 
     # Retrieve the primary SMTP address for the group
-    $primarySMTP = Get-UnifiedGroup $group.DisplayName | Select-Object PrimarySmtpAddress
+    $groupsSMTP = Get-UnifiedGroup $group.DisplayName | Select-Object PrimarySmtpAddress
 
     # Create a new custom object with the group name, managedBy user UPN, and primary SMTP address
     $result = [PSCustomObject] @{
         "Group Name" = $group.DisplayName
-        "Group Primary SMTP" = $primarySMTP.PrimarySmtpAddress
+        "Group Primary SMTP" = $groupsSMTP.PrimarySmtpAddress
         "Owners Name" = ($owners | Select-Object -ExpandProperty DisplayName) -join '; '
-        "Owners UPN" = ($owners | Select-Object -ExpandProperty UserPrincipalName) -join '; '
+        "Owners SMTP" = ($ownersSMTP | Select-Object -ExpandProperty PrimarySmtpAddress) -join '; '
         Language = $group.Language.Name
         "Access Type" = $group.AccessType
     }
